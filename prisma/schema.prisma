@@ -1,0 +1,29 @@
+// Prisma schema for ati-lead-sync.
+//
+// Why Postgres and not a local file: Vercel's serverless functions run on a
+// read-only filesystem (only /tmp is writable, and it's wiped between
+// invocations and not shared across instances), so dedup state can't live
+// in a JSON file the way the original local script did. Postgres persists
+// identically across every invocation. This is its own database, separate
+// from ati-reviews' — no shared data between the two unrelated projects.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// One row per Gmail message we've evaluated, keyed by Gmail's message id.
+// This is the entire dedup mechanism — before processing a message, check
+// whether its id is already here; after processing, record it here.
+model ProcessedMessage {
+  messageId   String   @id
+  source      String // "ati-lead" | "ati-propel-contact"
+  status      String // "created" | "needs_review" | "error"
+  itemId      String? // Monday.com item id, when status is "created"
+  reason      String? // parse failure reason, when status is "needs_review"
+  processedAt DateTime @default(now())
+}

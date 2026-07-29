@@ -1,0 +1,38 @@
+name: Import ATI leads to Monday.com
+
+# Vercel's free Hobby plan only allows daily cron jobs, too slow for lead
+# follow-up - so this workflow is the actual scheduler, hitting the deployed
+# Vercel API route every 15 minutes instead of relying on Vercel's own cron.
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {} # lets you trigger a run manually from the Actions tab, for testing
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call the import-leads endpoint
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          response=$(curl -sS -w "\n%{http_code}" \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$APP_URL/api/cron/import-leads")
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+
+          echo "HTTP status: $http_code"
+          echo "$body" | jq . || echo "$body"
+
+          if [ "$http_code" -ne 200 ]; then
+            echo "::error::Request failed with HTTP $http_code"
+            exit 1
+          fi
+
+          error_count=$(echo "$body" | jq -r '.summary.error // 0')
+          if [ "$error_count" -gt 0 ]; then
+            echo "::error::$error_count lead(s) failed to push - see output above"
+            exit 1
+          fi

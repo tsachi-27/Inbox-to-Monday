@@ -1,0 +1,75 @@
+import { ImapFlow } from "imapflow";
+import { simpleParser } from "mailparser";
+import type { RawLead } from "./process-lead";
+
+// Gmail's IMAP extension (X-GM-RAW) accepts the exact same search syntax as
+// the Gmail web UI, so these queries are carried over unchanged from the
+// original Gmail-connector-based implementation.
+const SOURCE_QUERIES: { source: RawLead["source"]; gmailraw: string }[] = [
+  {
+    source: "ati-lead",
+    gmailraw: 'from:email@ati-propel.co.il subject:"ATI Lead" newer_than:3d in:inbox',
+  },
+  {
+    source: "ati-propel-contact",
+    // "[PRE PRD] ... contact info ..." emails can loosely match "contact"
+    // despite this exclusion — the startsWith check below is the real guard.
+    gmailraw: 'from:noreply@ati-propel.com subject:"[Contact]" -subject:"PRE PRD" newer_than:3d in:inbox',
+  },
+];
+
+/**
+ * Searches the inbox for candidate lead emails from both known sources and
+ * returns their subject + HTML body + a stable dedup key (the RFC822
+ * Message-ID header — stable forever, unlike IMAP UIDs which are only
+ * stable within a mailbox's current UIDVALIDITY).
+ */
+export async function fetchCandidateLeads(): Promise<RawLead[]> {
+  const user = process.env.GMAIL_IMAP_USER;
+  const pass = process.env.GMAIL_IMAP_PASSWORD;
+  if (!user || !pass) {
+    throw new Error("GMAIL_IMAP_USER / GMAIL_IMAP_PASSWORD are not set");
+  }
+
+  const client = new ImapFlow({
+    host: "imap.gmail.com",
+    port: 993,
+    secure: true,
+    auth: { user, pass },
+    logger: false,
+  });
+
+  const leads: RawLead[] = [];
+
+  await client.connect();
+  try {
+    const lock = await client.getMailboxLock("INBOX");
+    try {
+      for (const { source, gmailraw } of SOURCE_QUERIES) {
+        const uids = await client.search({ gmailraw }, { uid: true });
+        if (!uids || uids.length === 0) continue;
+
+        for await (const message of client.fetch(uids, { source: true }, { uid: true })) {
+          if (!message.source) continue;
+          const parsed = await simpleParser(message.source);
+          const subject = parsed.subject ?? "";
+
+          if (source === "ati-propel-contact" && !subject.startsWith("[Contact]")) {
+            continue;
+          }
+
+          const body = parsed.html || parsed.textAsHtml || parsed.text || "";
+          const messageId = parsed.messageId ?? `imap-uid-${message.uid}`;
+
+          leads.push({ source, subject, body, messageId });
+        }
+      }
+    } finally {
+      lock.release();
+    }
+  } finally {
+    await client.logout();
+  }
+
+  return leads;
+}
