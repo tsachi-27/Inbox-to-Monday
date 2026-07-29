@@ -75,11 +75,29 @@ interface MondayGraphQLResponse {
   errors?: { message: string }[];
 }
 
+// HTTP header values must be Latin1 (byte values 0-255) - fetch throws
+// "Cannot convert argument to a ByteString" if a header value contains
+// anything outside that range. Header env vars occasionally pick up a stray
+// non-Latin1 character when copy-pasted through a browser UI (smart quotes,
+// zero-width characters, etc.), so strip anything illegal defensively and
+// log if it ever actually removes something - that log is the signal to go
+// re-paste the source env var cleanly rather than relying on this forever.
+function sanitizeHeaderValue(value: string, envVarName: string): string {
+  const cleaned = value.replace(/[^\x00-\xFF]/g, "");
+  if (cleaned !== value) {
+    console.warn(
+      `${envVarName} contained ${value.length - cleaned.length} non-Latin1 character(s) that were stripped before use as an HTTP header. This env var likely needs to be re-pasted in Vercel's dashboard.`
+    );
+  }
+  return cleaned.trim();
+}
+
 export async function mondayCreateItem(itemName: string, columnValues: Record<string, ColumnValue>): Promise<string> {
-  const token = process.env.MONDAY_API_TOKEN;
-  if (!token) {
+  const rawToken = process.env.MONDAY_API_TOKEN;
+  if (!rawToken) {
     throw new MondayApiError("MONDAY_API_TOKEN is not set");
   }
+  const token = sanitizeHeaderValue(rawToken, "MONDAY_API_TOKEN");
 
   const query = `
     mutation ($boardId: ID!, $groupId: String!, $itemName: String!, $columnValues: JSON!) {

@@ -25,8 +25,10 @@ const SOURCE_QUERIES: { source: RawLead["source"]; gmailraw: string }[] = [
  * stable within a mailbox's current UIDVALIDITY).
  */
 export async function fetchCandidateLeads(): Promise<RawLead[]> {
-  const user = process.env.GMAIL_IMAP_USER;
-  const pass = process.env.GMAIL_IMAP_PASSWORD;
+  // .trim() defensively - env vars pasted through a browser UI occasionally
+  // pick up leading/trailing whitespace, which breaks IMAP auth silently.
+  const user = process.env.GMAIL_IMAP_USER?.trim();
+  const pass = process.env.GMAIL_IMAP_PASSWORD?.trim();
   if (!user || !pass) {
     throw new Error("GMAIL_IMAP_USER / GMAIL_IMAP_PASSWORD are not set");
   }
