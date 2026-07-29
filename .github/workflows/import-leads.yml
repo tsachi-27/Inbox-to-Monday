@@ -2,10 +2,13 @@ name: Import ATI leads to Monday.com
 
 # Vercel's free Hobby plan only allows daily cron jobs, too slow for lead
 # follow-up - so this workflow is the actual scheduler, hitting the deployed
-# Vercel API route every 15 minutes instead of relying on Vercel's own cron.
+# Vercel API route every 5 minutes instead of relying on Vercel's own cron.
+# (This repo is public, so Actions minutes are free/unlimited - if it's ever
+# made private again, note this schedule would burn ~8,760 minutes/month,
+# well past the 2,000 free minutes a private repo gets.)
 on:
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "*/5 * * * *"
   workflow_dispatch: {} # lets you trigger a run manually from the Actions tab, for testing
 
 jobs:
