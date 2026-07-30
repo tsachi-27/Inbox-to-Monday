@@ -44,8 +44,7 @@ export const boardConfig = {
       fillSubjectFromMessage: true,
     },
     "ati-final-prd": {
-      // No Landing Page label requested for this source — leave it unset,
-      // same "hands off unless asked" default as the other two sources.
+      landingPageLabel: "Claude .com",
       statusLabel: "PRE PRD",
       fillSubjectFromMessage: false,
     },
