@@ -16,7 +16,19 @@ const SOURCE_QUERIES: { source: RawLead["source"]; gmailraw: string }[] = [
     // despite this exclusion — the startsWith check below is the real guard.
     gmailraw: 'from:noreply@ati-propel.com subject:"[Contact]" -subject:"PRE PRD" newer_than:3d in:inbox',
   },
+  {
+    source: "ati-final-prd",
+    gmailraw: 'from:noreply@ati-propel.com subject:"PRE PRD - FINAL" newer_than:3d in:inbox',
+  },
 ];
+
+// PRE PRD FINAL submissions can be emailed twice for the same underlying
+// form (an immediate notification, then a follow-up once the PDF finishes
+// generating a few minutes later) — different Message-IDs, same person. The
+// ticket ("ATI-XXXXXXXX-XXXX") embedded in the subject line identifies the
+// actual submission, so use it as the dedup key for this source instead of
+// the per-email Message-ID.
+const TICKET_PATTERN = /ATI-[A-Za-z0-9]+-[A-Za-z0-9]+/;
 
 /**
  * Searches the inbox for candidate lead emails from both known sources and
@@ -61,7 +73,12 @@ export async function fetchCandidateLeads(): Promise<RawLead[]> {
           }
 
           const body = parsed.html || parsed.textAsHtml || parsed.text || "";
-          const messageId = parsed.messageId ?? `imap-uid-${message.uid}`;
+
+          let messageId = parsed.messageId ?? `imap-uid-${message.uid}`;
+          if (source === "ati-final-prd") {
+            const ticket = subject.match(TICKET_PATTERN)?.[0];
+            if (ticket) messageId = `ati-final-prd:${ticket}`;
+          }
 
           leads.push({ source, subject, body, messageId });
         }

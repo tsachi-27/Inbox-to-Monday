@@ -45,8 +45,11 @@ export function buildColumnValues(fields: LeadFields, source: LeadSource): Recor
   const sourceConfig = boardConfig.sources[source];
   const columnValues: Record<string, ColumnValue> = {};
 
-  if (cols.landingPage.id) {
+  if (cols.landingPage.id && sourceConfig.landingPageLabel) {
     columnValues[cols.landingPage.id] = { label: sourceConfig.landingPageLabel };
+  }
+  if (cols.status.id && sourceConfig.statusLabel) {
+    columnValues[cols.status.id] = { label: sourceConfig.statusLabel };
   }
   if (cols.contactDate.id) {
     columnValues[cols.contactDate.id] = { date: todayISO() };
@@ -105,7 +108,8 @@ export async function mondayCreateItem(itemName: string, columnValues: Record<st
         board_id: $boardId,
         group_id: $groupId,
         item_name: $itemName,
-        column_values: $columnValues
+        column_values: $columnValues,
+        create_labels_if_missing: true
       ) {
         id
       }

@@ -3,11 +3,17 @@
 // scripts/inspect-board.js against the real "Leads" board and are stable
 // (Monday column/group ids don't change once created).
 
-export type LeadSource = "ati-lead" | "ati-propel-contact";
+export type LeadSource = "ati-lead" | "ati-propel-contact" | "ati-final-prd";
 
 interface ColumnConfig {
   id: string;
   type: "status" | "date" | "phone" | "text" | "people";
+}
+
+interface SourceConfig {
+  landingPageLabel?: string;
+  statusLabel?: string;
+  fillSubjectFromMessage: boolean;
 }
 
 export const boardConfig = {
@@ -15,10 +21,12 @@ export const boardConfig = {
   groupId: "new_group67093",
   columns: {
     landingPage: { id: "status_190", type: "status" } satisfies ColumnConfig,
-    // Status is left unmapped on purpose — the board already defaults new
-    // items to "To Schedule" via its own automation, and Tsachi wants full
-    // manual control over that column and Landing Page's exact label.
-    status: { id: "", type: "status" } satisfies ColumnConfig,
+    // Status is left unmapped for ati-lead / ati-propel-contact on purpose —
+    // Tsachi wants full manual control over that column for those sources.
+    // The ati-final-prd source is the one deliberate exception (see
+    // sources.statusLabel below), so the column id itself is real; whether
+    // it actually gets written depends entirely on the source config.
+    status: { id: "status7", type: "status" } satisfies ColumnConfig,
     subject: { id: "text0", type: "text" } satisfies ColumnConfig,
     contactDate: { id: "contact_date", type: "date" } satisfies ColumnConfig,
     reminder: { id: "reminder", type: "date" } satisfies ColumnConfig,
@@ -35,5 +43,11 @@ export const boardConfig = {
       landingPageLabel: "Claude .com",
       fillSubjectFromMessage: true,
     },
-  } satisfies Record<LeadSource, { landingPageLabel: string; fillSubjectFromMessage: boolean }>,
+    "ati-final-prd": {
+      // No Landing Page label requested for this source — leave it unset,
+      // same "hands off unless asked" default as the other two sources.
+      statusLabel: "PRE PRD",
+      fillSubjectFromMessage: false,
+    },
+  } as Record<LeadSource, SourceConfig>,
 };

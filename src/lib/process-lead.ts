@@ -1,6 +1,7 @@
 import { prisma } from "./prisma";
 import { parseLead } from "./parse-lead";
 import { parseContactForm } from "./parse-contact-form";
+import { parseFinalPrd } from "./parse-final-prd";
 import { buildColumnValues, mondayCreateItem, MondayApiError } from "./monday";
 import type { LeadSource } from "./board-config";
 
@@ -20,6 +21,7 @@ export type ProcessResult =
 const PARSERS = {
   "ati-lead": parseLead,
   "ati-propel-contact": parseContactForm,
+  "ati-final-prd": parseFinalPrd,
 } as const;
 
 /**
@@ -37,14 +39,25 @@ export async function processLead(lead: RawLead): Promise<ProcessResult> {
   const parsed = parseFn(lead.subject, lead.body);
 
   if (!parsed.ok) {
-    await prisma.processedMessage.create({
-      data: {
-        messageId: lead.messageId,
-        source: lead.source,
-        status: "needs_review",
-        reason: parsed.reason,
-      },
-    });
+    // ati-final-prd's dedup key is the submission ticket, shared with an
+    // earlier "still filling in contact info" placeholder notification for
+    // the same ticket (sent a few minutes before the real, complete one).
+    // That placeholder always fails to parse (no email yet) but isn't a
+    // real error — persisting it under the ticket key would permanently
+    // block the real submission from ever being pushed once it arrives. So
+    // for this source, an unparseable email is deliberately NOT recorded
+    // (same as a transient Monday error below) — it just gets retried next
+    // run, same ticket key, until the complete version shows up.
+    if (lead.source !== "ati-final-prd") {
+      await prisma.processedMessage.create({
+        data: {
+          messageId: lead.messageId,
+          source: lead.source,
+          status: "needs_review",
+          reason: parsed.reason,
+        },
+      });
+    }
     return { status: "needs_review", messageId: lead.messageId, reason: parsed.reason, subject: lead.subject };
   }
 
