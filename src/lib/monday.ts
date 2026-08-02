@@ -69,6 +69,9 @@ export function buildColumnValues(fields: LeadFields, source: LeadSource): Recor
   if (sourceConfig.fillSubjectFromMessage && cols.subject.id && fields.message) {
     columnValues[cols.subject.id] = fields.message;
   }
+  if (cols.subject.id && sourceConfig.subjectText) {
+    columnValues[cols.subject.id] = sourceConfig.subjectText;
+  }
 
   return columnValues;
 }

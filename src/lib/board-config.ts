@@ -13,6 +13,7 @@ interface ColumnConfig {
 interface SourceConfig {
   landingPageLabel?: string;
   statusLabel?: string;
+  subjectText?: string;
   fillSubjectFromMessage: boolean;
 }
 
@@ -46,6 +47,7 @@ export const boardConfig = {
     "ati-final-prd": {
       landingPageLabel: "Claude .com",
       statusLabel: "PRE PRD",
+      subjectText: "PRE PRD",
       fillSubjectFromMessage: false,
     },
   } as Record<LeadSource, SourceConfig>,
