@@ -22,7 +22,19 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const candidates = await fetchCandidateLeads();
+  let candidates: Awaited<ReturnType<typeof fetchCandidateLeads>>;
+  try {
+    candidates = await fetchCandidateLeads();
+  } catch (err) {
+    // Unlike a single lead's Monday push failing (handled per-lead below),
+    // a failure here means IMAP itself is broken (e.g. a stale Gmail app
+    // password) - nothing can be processed this run. Surface the real
+    // error instead of letting it crash into an opaque 500 with no body,
+    // which made a real outage hard to diagnose remotely.
+    const message = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: "fetchCandidateLeads failed", message }, { status: 500 });
+  }
+
   const results: ProcessResult[] = [];
 
   for (const lead of candidates) {
