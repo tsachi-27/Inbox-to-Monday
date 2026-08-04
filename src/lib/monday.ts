@@ -16,13 +16,13 @@ function dateToISO(d: Date): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-function todayISO(): string {
+export function todayISO(): string {
   return dateToISO(new Date());
 }
 
 // Next business day: date + 1, then skip forward past Friday/Saturday to Sunday.
 // Sun/Mon/Tue/Wed -> +1. Thu -> +3 (lands on Sun). Fri -> +2 (lands on Sun). Sat -> +1 (lands on Sun).
-function reminderDateISO(base: Date = new Date()): string {
+export function reminderDateISO(base: Date = new Date()): string {
   const d = new Date(base);
   d.setDate(d.getDate() + 1);
   while (d.getDay() === 5 || d.getDay() === 6) {
