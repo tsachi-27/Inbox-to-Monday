@@ -33,19 +33,80 @@ function colorForGroup(title: string): string {
   return STAGE_COLOR[title] ?? OTHER_COLOR;
 }
 
-type Preset = "this-year" | "last-30" | "last-90" | "all-time" | "custom";
+type Preset =
+  | "today"
+  | "yesterday"
+  | "this-week"
+  | "last-week"
+  | "this-month"
+  | "last-month"
+  | "this-quarter"
+  | "last-quarter"
+  | "last-6-months"
+  | "this-year"
+  | "last-year"
+  | "custom";
 
-function todayISO(): string {
-  const d = new Date();
+const PRESETS: { key: Preset; label: string }[] = [
+  { key: "today", label: "Today" },
+  { key: "yesterday", label: "Yesterday" },
+  { key: "this-week", label: "This week" },
+  { key: "last-week", label: "Last week" },
+  { key: "this-month", label: "This month" },
+  { key: "last-month", label: "Last month" },
+  { key: "this-quarter", label: "This quarter" },
+  { key: "last-quarter", label: "Last quarter" },
+  { key: "last-6-months", label: "Last 6 months" },
+  { key: "this-year", label: "This year" },
+  { key: "last-year", label: "Last year" },
+];
+
+function fmt(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
-function daysAgoISO(n: number): string {
+function todayISO(): string {
+  return fmt(new Date());
+}
+function daysAgo(n: number): Date {
   const d = new Date();
   d.setDate(d.getDate() - n);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return d;
 }
-function startOfYearISO(): string {
-  return `${new Date().getFullYear()}-01-01`;
+function monthsAgo(n: number): Date {
+  const d = new Date();
+  d.setMonth(d.getMonth() - n);
+  return d;
+}
+// Sunday-start week, matching the Sun-Thu work week used elsewhere in this app.
+function startOfWeek(d: Date): Date {
+  const r = new Date(d);
+  r.setDate(r.getDate() - r.getDay());
+  return r;
+}
+function endOfWeek(d: Date): Date {
+  const r = startOfWeek(d);
+  r.setDate(r.getDate() + 6);
+  return r;
+}
+function startOfMonth(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), 1);
+}
+function endOfMonth(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth() + 1, 0);
+}
+function startOfQuarter(d: Date): Date {
+  const q = Math.floor(d.getMonth() / 3);
+  return new Date(d.getFullYear(), q * 3, 1);
+}
+function endOfQuarter(d: Date): Date {
+  const q = Math.floor(d.getMonth() / 3);
+  return new Date(d.getFullYear(), q * 3 + 3, 0);
+}
+function startOfYearDate(d: Date): Date {
+  return new Date(d.getFullYear(), 0, 1);
+}
+function endOfYearDate(d: Date): Date {
+  return new Date(d.getFullYear(), 11, 31);
 }
 
 export default function DashboardPage() {
@@ -53,7 +114,7 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [preset, setPreset] = useState<Preset>("this-year");
-  const [from, setFrom] = useState(startOfYearISO());
+  const [from, setFrom] = useState(fmt(startOfYearDate(new Date())));
   const [to, setTo] = useState(todayISO());
   const [chartType, setChartType] = useState<"bar" | "pie" | "funnel">("funnel");
   const [hovered, setHovered] = useState<string | null>(null);
@@ -80,18 +141,44 @@ export default function DashboardPage() {
 
   function applyPreset(p: Preset) {
     setPreset(p);
-    if (p === "this-year") {
-      setFrom(startOfYearISO());
+    const now = new Date();
+    if (p === "today") {
+      setFrom(todayISO());
       setTo(todayISO());
-    } else if (p === "last-30") {
-      setFrom(daysAgoISO(30));
+    } else if (p === "yesterday") {
+      setFrom(fmt(daysAgo(1)));
+      setTo(fmt(daysAgo(1)));
+    } else if (p === "this-week") {
+      setFrom(fmt(startOfWeek(now)));
       setTo(todayISO());
-    } else if (p === "last-90") {
-      setFrom(daysAgoISO(90));
+    } else if (p === "last-week") {
+      const ref = daysAgo(7);
+      setFrom(fmt(startOfWeek(ref)));
+      setTo(fmt(endOfWeek(ref)));
+    } else if (p === "this-month") {
+      setFrom(fmt(startOfMonth(now)));
       setTo(todayISO());
-    } else if (p === "all-time") {
-      setFrom("2000-01-01");
+    } else if (p === "last-month") {
+      const ref = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      setFrom(fmt(startOfMonth(ref)));
+      setTo(fmt(endOfMonth(ref)));
+    } else if (p === "this-quarter") {
+      setFrom(fmt(startOfQuarter(now)));
       setTo(todayISO());
+    } else if (p === "last-quarter") {
+      const ref = new Date(startOfQuarter(now).getTime() - 86400000); // one day before this quarter started
+      setFrom(fmt(startOfQuarter(ref)));
+      setTo(fmt(endOfQuarter(ref)));
+    } else if (p === "last-6-months") {
+      setFrom(fmt(monthsAgo(6)));
+      setTo(todayISO());
+    } else if (p === "this-year") {
+      setFrom(fmt(startOfYearDate(now)));
+      setTo(todayISO());
+    } else if (p === "last-year") {
+      const ref = new Date(now.getFullYear() - 1, 0, 1);
+      setFrom(fmt(startOfYearDate(ref)));
+      setTo(fmt(endOfYearDate(ref)));
     }
   }
 
@@ -246,18 +333,11 @@ export default function DashboardPage() {
         <p className="subtitle">Lead volume by pipeline stage, filtered by Contact Date</p>
 
         <div className="card filters">
-          <button className="preset-btn" data-active={preset === "this-year"} onClick={() => applyPreset("this-year")}>
-            This year
-          </button>
-          <button className="preset-btn" data-active={preset === "last-30"} onClick={() => applyPreset("last-30")}>
-            Last 30 days
-          </button>
-          <button className="preset-btn" data-active={preset === "last-90"} onClick={() => applyPreset("last-90")}>
-            Last 90 days
-          </button>
-          <button className="preset-btn" data-active={preset === "all-time"} onClick={() => applyPreset("all-time")}>
-            All time
-          </button>
+          {PRESETS.map((p) => (
+            <button key={p.key} className="preset-btn" data-active={preset === p.key} onClick={() => applyPreset(p.key)}>
+              {p.label}
+            </button>
+          ))}
           <div className="date-inputs">
             <input
               type="date"
