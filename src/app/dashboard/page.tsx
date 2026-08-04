@@ -232,12 +232,13 @@ export default function DashboardPage() {
         }
         .dash * { box-sizing: border-box; }
         .wrap { max-width: 880px; margin: 0 auto; }
-        .eyebrow {
-          font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
-          color: var(--accent); margin: 0 0 8px;
+        .page-header {
+          display: flex; align-items: flex-start; justify-content: space-between; gap: 24px;
+          margin-bottom: 28px;
         }
+        .logo { height: 44px; width: auto; flex-shrink: 0; }
         h1 { font-size: 26px; font-weight: 650; margin: 0 0 6px; letter-spacing: -0.01em; }
-        .subtitle { color: var(--text-secondary); font-size: 14px; margin: 0 0 28px; }
+        .subtitle { color: var(--text-secondary); font-size: 14px; margin: 0; }
         .card {
           background: linear-gradient(180deg, var(--surface-2), var(--surface-1));
           border: 1px solid var(--border);
@@ -328,9 +329,14 @@ export default function DashboardPage() {
       `}</style>
 
       <div className="wrap">
-        <p className="eyebrow">ATI Ltd</p>
-        <h1>Leads Dashboard</h1>
-        <p className="subtitle">Lead volume by pipeline stage, filtered by Contact Date</p>
+        <div className="page-header">
+          <div>
+            <h1>Leads Dashboard</h1>
+            <p className="subtitle">Lead volume by pipeline stage, filtered by Contact Date</p>
+          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="logo" src="/ati-logo.png" alt="ATI - Advanced Thinking Ingenuity" />
+        </div>
 
         <div className="card filters">
           {PRESETS.map((p) => (
