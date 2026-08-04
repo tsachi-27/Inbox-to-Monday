@@ -199,16 +199,16 @@ export default function DashboardPage() {
           width: 150px; flex-shrink: 0; font-size: 13px; color: var(--text-secondary);
           text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
-        .bar-track { flex: 1; position: relative; height: 24px; }
+        .bar-track { flex: 1; height: 24px; }
         .bar-fill {
           height: 100%; border-radius: 4px;
           transition: filter 0.1s; cursor: default; min-width: 2px;
         }
         .bar-fill[data-hovered="true"] { filter: brightness(1.15); }
         .bar-value {
-          position: absolute; top: 50%; transform: translateY(-50%);
+          width: 32px; flex-shrink: 0;
           font-size: 12px; color: var(--text-primary); font-variant-numeric: tabular-nums;
-          padding-inline-start: 8px; white-space: nowrap;
+          text-align: left; white-space: nowrap;
         }
         .empty { color: var(--text-muted); font-size: 14px; padding: 24px 0; text-align: center; }
         .pie-wrap { display: flex; align-items: center; gap: 32px; flex-wrap: wrap; }
@@ -337,10 +337,8 @@ export default function DashboardPage() {
                           data-hovered={hovered === g.title}
                           style={{ width: `${pct}%`, background: colorForGroup(g.title) }}
                         />
-                        <div className="bar-value" style={{ insetInlineStart: `calc(${pct}% + 4px)` }}>
-                          {g.count.toLocaleString()}
-                        </div>
                       </div>
+                      <div className="bar-value">{g.count.toLocaleString()}</div>
                     </div>
                   );
                 })}
