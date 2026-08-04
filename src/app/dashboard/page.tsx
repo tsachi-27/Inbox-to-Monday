@@ -8,30 +8,29 @@ interface Lead {
   contactDate: string;
 }
 
-// The pipeline itself, left to right - this is an ORDERED sequence (a lead's
-// group position is where it sits in the funnel), not an arbitrary set of
-// categories, so color follows the same rule as a funnel/tier chart: one hue,
-// monotone lightness steps, rather than distinct categorical hues per stage.
+// The pipeline itself, left to right.
 const PIPELINE_ORDER = ["New Leads", "Meeting", "PQ", "Orders", "Follow Up", "Finish Orders", "Not Relevant"];
 
-// Sequential blue ramp (see project's dataviz skill / palette.md), light->dark
-// mapped onto pipeline position. Light-mode steps stay >= step 250 (2:1 vs
-// surface per the ordinal-ramp rule); dark-mode steps stay <= step 600 for
-// the same reason on the dark surface.
-const ORDINAL_RAMP: { light: string; dark: string }[] = [
-  { light: "#86b6ef", dark: "#cde2fb" }, // New Leads
-  { light: "#6da7ec", dark: "#9ec5f4" }, // Meeting
-  { light: "#3987e5", dark: "#6da7ec" }, // PQ
-  { light: "#2a78d6", dark: "#3987e5" }, // Orders
-  { light: "#1c5cab", dark: "#256abf" }, // Follow Up
-  { light: "#184f95", dark: "#1c5cab" }, // Finish Orders
-  { light: "#0d366b", dark: "#184f95" }, // Not Relevant
-];
-const OTHER_COLOR = { light: "#898781", dark: "#898781" }; // groups outside the named pipeline
+// Distinct, CVD-validated hues (dataviz skill's categorical palette, dark-
+// surface steps) - one per pipeline stage. Switched from a single-hue
+// lightness ramp after direct feedback: a monotone ramp leans on lightness/
+// saturation differences that are hard to read with color vision
+// deficiency, where genuinely distinct hues (blue vs yellow vs red) work
+// far better. Position in the funnel/bar still carries the stage order, so
+// color is free to spend on maximum separation instead.
+const STAGE_COLOR: Record<string, string> = {
+  "New Leads": "#3987e5", // blue
+  Meeting: "#d95926", // orange
+  PQ: "#199e70", // aqua
+  Orders: "#c98500", // yellow
+  "Follow Up": "#d55181", // magenta
+  "Finish Orders": "#008300", // green
+  "Not Relevant": "#e66767", // red
+};
+const OTHER_COLOR = "#1a1a1a"; // near-black, for any group outside the named pipeline
 
-function colorForGroup(title: string): { light: string; dark: string } {
-  const idx = PIPELINE_ORDER.indexOf(title);
-  return idx === -1 ? OTHER_COLOR : ORDINAL_RAMP[idx];
+function colorForGroup(title: string): string {
+  return STAGE_COLOR[title] ?? OTHER_COLOR;
 }
 
 type Preset = "this-year" | "last-30" | "last-90" | "all-time" | "custom";
@@ -109,8 +108,7 @@ export default function DashboardPage() {
       }
     }
     // Fixed pipeline order first (New Leads -> ... -> Not Relevant); any
-    // group outside that named list (e.g. Bressler, Ben Ami) falls after it,
-    // sorted by count so nothing real gets silently dropped.
+    // group outside that named list falls after it, sorted by count.
     return Array.from(counts.values()).sort((a, b) => {
       const ai = PIPELINE_ORDER.indexOf(a.title);
       const bi = PIPELINE_ORDER.indexOf(b.title);
@@ -128,77 +126,75 @@ export default function DashboardPage() {
     <main className="dash">
       <style>{`
         .dash {
-          --surface-1: #fcfcfb;
-          --page: #f9f9f7;
-          --text-primary: #0b0b0b;
-          --text-secondary: #52514e;
-          --text-muted: #898781;
-          --gridline: #e1e0d9;
-          --baseline: #c3c2b7;
-          --border: rgba(11,11,11,0.10);
-          --accent: #2a78d6;
-          color-scheme: light;
+          --page: #000000;
+          --surface-1: #121212;
+          --surface-2: #191919;
+          --text-primary: #fafaf9;
+          --text-secondary: #b8b6ae;
+          --text-muted: #7a786f;
+          --gridline: #262624;
+          --border: rgba(255,255,255,0.09);
+          --accent: #3987e5;
+          color-scheme: dark;
           background: var(--page);
           color: var(--text-primary);
           font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
           min-height: 100vh;
-          padding: 32px 24px 64px;
+          padding: 40px 24px 72px;
           box-sizing: border-box;
-        }
-        @media (prefers-color-scheme: dark) {
-          .dash {
-            --surface-1: #1a1a19;
-            --page: #0d0d0d;
-            --text-primary: #ffffff;
-            --text-secondary: #c3c2b7;
-            --text-muted: #898781;
-            --gridline: #2c2c2a;
-            --baseline: #383835;
-            --border: rgba(255,255,255,0.10);
-            --accent: #3987e5;
-            color-scheme: dark;
-          }
         }
         .dash * { box-sizing: border-box; }
         .wrap { max-width: 880px; margin: 0 auto; }
-        h1 { font-size: 22px; font-weight: 600; margin: 0 0 4px; }
+        .eyebrow {
+          font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+          color: var(--accent); margin: 0 0 8px;
+        }
+        h1 { font-size: 26px; font-weight: 650; margin: 0 0 6px; letter-spacing: -0.01em; }
         .subtitle { color: var(--text-secondary); font-size: 14px; margin: 0 0 28px; }
         .card {
-          background: var(--surface-1);
+          background: linear-gradient(180deg, var(--surface-2), var(--surface-1));
           border: 1px solid var(--border);
-          border-radius: 12px;
-          padding: 20px 24px;
+          border-radius: 14px;
+          padding: 22px 24px;
           margin-bottom: 20px;
+          box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 12px 32px -20px rgba(0,0,0,0.8);
         }
         .filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
         .preset-btn {
           font: inherit; font-size: 13px; padding: 7px 14px; border-radius: 8px;
           border: 1px solid var(--border); background: transparent; color: var(--text-secondary);
-          cursor: pointer;
+          cursor: pointer; transition: border-color 0.15s, color 0.15s;
         }
+        .preset-btn:hover { border-color: rgba(255,255,255,0.22); color: var(--text-primary); }
         .preset-btn[data-active="true"] {
           background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600;
         }
         .date-inputs { display: flex; align-items: center; gap: 6px; margin-inline-start: auto; font-size: 13px; color: var(--text-secondary); }
         .date-inputs input {
           font: inherit; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border);
-          background: var(--surface-1); color: var(--text-primary);
+          background: var(--surface-1); color: var(--text-primary); color-scheme: dark;
         }
         .refresh-btn {
           font: inherit; font-size: 13px; padding: 7px 14px; border-radius: 8px;
           border: 1px solid var(--border); background: transparent; color: var(--text-secondary); cursor: pointer;
         }
-        .hero { font-size: 48px; font-weight: 600; line-height: 1; margin: 0 0 4px; }
+        .refresh-btn:hover { border-color: rgba(255,255,255,0.22); color: var(--text-primary); }
+        .hero {
+          font-size: 52px; font-weight: 650; line-height: 1; margin: 0 0 6px; letter-spacing: -0.02em;
+          background: linear-gradient(180deg, #ffffff, #cfcfca);
+          -webkit-background-clip: text; background-clip: text; color: transparent;
+        }
         .hero-label { font-size: 14px; color: var(--text-secondary); }
         .chart-toggle { display: flex; gap: 6px; }
         .chart-toggle button {
           font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 8px;
           border: 1px solid var(--border); background: transparent; color: var(--text-secondary); cursor: pointer;
         }
-        .chart-toggle button[data-active="true"] { background: var(--text-primary); color: var(--surface-1); font-weight: 600; }
+        .chart-toggle button:hover { border-color: rgba(255,255,255,0.22); color: var(--text-primary); }
+        .chart-toggle button[data-active="true"] { background: var(--text-primary); color: #000; font-weight: 600; border-color: var(--text-primary); }
         .card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
         .card-head h2 { font-size: 15px; font-weight: 600; margin: 0; }
-        .bar-row { display: flex; align-items: center; gap: 12px; padding: 5px 0; }
+        .bar-row { display: flex; align-items: center; gap: 12px; padding: 6px 0; }
         .bar-label {
           width: 150px; flex-shrink: 0; font-size: 13px; color: var(--text-secondary);
           text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -208,7 +204,7 @@ export default function DashboardPage() {
           height: 100%; border-radius: 4px;
           transition: filter 0.1s; cursor: default; min-width: 2px;
         }
-        .bar-fill[data-hovered="true"] { filter: brightness(1.12); }
+        .bar-fill[data-hovered="true"] { filter: brightness(1.15); }
         .bar-value {
           position: absolute; top: 50%; transform: translateY(-50%);
           font-size: 12px; color: var(--text-primary); font-variant-numeric: tabular-nums;
@@ -221,15 +217,15 @@ export default function DashboardPage() {
         .legend-swatch { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
         .legend-title { color: var(--text-secondary); flex: 1; }
         .legend-count { font-variant-numeric: tabular-nums; color: var(--text-primary); font-weight: 600; }
-        .funnel-track { display: flex; width: 100%; height: 56px; border-radius: 6px; overflow: hidden; }
+        .funnel-track { display: flex; width: 100%; height: 56px; border-radius: 8px; overflow: hidden; }
         .funnel-seg {
           height: 100%; display: flex; align-items: center; justify-content: center; position: relative;
           transition: filter 0.1s; cursor: default; min-width: 2px;
         }
-        .funnel-seg[data-hovered="true"] { filter: brightness(1.12); }
+        .funnel-seg[data-hovered="true"] { filter: brightness(1.15); }
         .funnel-seg-label {
-          font-size: 12px; font-weight: 600; color: #fff; text-align: center; padding: 0 6px;
-          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+          font-size: 12px; font-weight: 700; color: #fff; text-align: center; padding: 0 6px;
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 2px rgba(0,0,0,0.35);
         }
         .funnel-axis { display: flex; width: 100%; margin-top: 8px; }
         .funnel-axis-item {
@@ -241,11 +237,12 @@ export default function DashboardPage() {
         td { padding: 8px 4px; border-bottom: 1px solid var(--gridline); }
         td:last-child, th:last-child { text-align: end; font-variant-numeric: tabular-nums; }
         .status-line { color: var(--text-muted); font-size: 13px; padding: 24px 0; text-align: center; }
-        .error { color: #e34948; font-size: 13px; }
+        .error { color: #e66767; font-size: 13px; }
       `}</style>
 
       <div className="wrap">
-        <h1>ATI Leads Dashboard</h1>
+        <p className="eyebrow">ATI Ltd</p>
+        <h1>Leads Dashboard</h1>
         <p className="subtitle">Lead volume by pipeline stage, filtered by Contact Date</p>
 
         <div className="card filters">
@@ -329,7 +326,6 @@ export default function DashboardPage() {
               <div>
                 {grouped.map((g) => {
                   const pct = (g.count / maxCount) * 100;
-                  const color = colorForGroup(g.title);
                   return (
                     <div className="bar-row" key={g.title} onMouseEnter={() => setHovered(g.title)} onMouseLeave={() => setHovered(null)}>
                       <div className="bar-label" title={g.title}>
@@ -339,7 +335,7 @@ export default function DashboardPage() {
                         <div
                           className="bar-fill"
                           data-hovered={hovered === g.title}
-                          style={{ width: `${pct}%`, ["--slice-color" as string]: `light-dark(${color.light}, ${color.dark})`, background: "var(--slice-color)" }}
+                          style={{ width: `${pct}%`, background: colorForGroup(g.title) }}
                         />
                         <div className="bar-value" style={{ insetInlineStart: `calc(${pct}% + 4px)` }}>
                           {g.count.toLocaleString()}
@@ -385,11 +381,7 @@ export default function DashboardPage() {
   );
 }
 
-// Single horizontal stacked bar, left-to-right in pipeline order - "New
-// Leads" starts the row, "Not Relevant" ends it, each segment's width
-// proportional to its share of the total. This is the Gantt-style funnel
-// view: reading left to right shows where leads currently sit in the
-// pipeline in one glance, without needing to compare separate bars.
+// Single horizontal stacked bar, left-to-right in pipeline order.
 function FunnelChart({
   data,
   total,
@@ -406,10 +398,6 @@ function FunnelChart({
       <div className="funnel-track">
         {data.map((g) => {
           const pct = total > 0 ? (g.count / total) * 100 : 0;
-          const color = colorForGroup(g.title);
-          // A segment narrower than ~9% can't fit "Label 12" comfortably -
-          // per the label-fit rule, drop to just the count, and if it's too
-          // thin even for that, the tooltip carries it instead.
           const showLabel = pct >= 9;
           const showCountOnly = pct >= 4 && pct < 9;
           return (
@@ -417,7 +405,7 @@ function FunnelChart({
               key={g.title}
               className="funnel-seg"
               data-hovered={hovered === g.title}
-              style={{ width: `${pct}%`, ["--slice-color" as string]: `light-dark(${color.light}, ${color.dark})`, background: "var(--slice-color)" }}
+              style={{ width: `${pct}%`, background: colorForGroup(g.title) }}
               onMouseEnter={() => setHovered(g.title)}
               onMouseLeave={() => setHovered(null)}
             >
@@ -425,7 +413,7 @@ function FunnelChart({
                 {showLabel ? `${g.title} · ${g.count}` : showCountOnly ? g.count : ""}
               </span>
               <title>
-                {g.title}: {g.count} ({(pct).toFixed(1)}%)
+                {g.title}: {g.count} ({pct.toFixed(1)}%)
               </title>
             </div>
           );
@@ -485,8 +473,8 @@ function PieChart({
           <path
             key={s.title}
             d={s.path}
-            fill="var(--slice-color)"
-            style={{ ["--slice-color" as string]: `light-dark(${s.color.light}, ${s.color.dark})`, opacity: hovered && hovered !== s.title ? 0.55 : 1 }}
+            fill={s.color}
+            style={{ opacity: hovered && hovered !== s.title ? 0.55 : 1 }}
             stroke="var(--surface-1)"
             strokeWidth={2}
             onMouseEnter={() => setHovered(s.title)}
@@ -501,10 +489,7 @@ function PieChart({
       <div className="legend">
         {slices.map((s) => (
           <div className="legend-row" key={s.title} onMouseEnter={() => setHovered(s.title)} onMouseLeave={() => setHovered(null)}>
-            <span
-              className="legend-swatch"
-              style={{ background: `light-dark(${s.color.light}, ${s.color.dark})`, opacity: hovered && hovered !== s.title ? 0.55 : 1 }}
-            />
+            <span className="legend-swatch" style={{ background: s.color, opacity: hovered && hovered !== s.title ? 0.55 : 1 }} />
             <span className="legend-title">{s.title}</span>
             <span className="legend-count">
               {s.count} · {(s.fraction * 100).toFixed(0)}%
