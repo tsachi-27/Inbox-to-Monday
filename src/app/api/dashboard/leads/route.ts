@@ -6,6 +6,7 @@ const MONDAY_API_URL = "https://api.monday.com/v2";
 
 interface MondayItem {
   id: string;
+  name: string;
   group: { id: string; title: string };
   column_values: { id: string; text: string | null }[];
 }
@@ -63,6 +64,7 @@ export async function GET() {
             cursor
             items {
               id
+              name
               group { id title }
               column_values(ids: $colIds) { id text }
             }
@@ -82,6 +84,7 @@ export async function GET() {
             cursor
             items {
               id
+              name
               group { id title }
               column_values(ids: $colIds) { id text }
             }
@@ -99,12 +102,13 @@ export async function GET() {
         return {
           groupId: item.group.id,
           groupTitle: item.group.title,
+          name: item.name,
           contactDate: byId[boardConfig.columns.contactDate.id] || null,
           status: byId[boardConfig.columns.status.id] || null,
         };
       })
       .filter((lead) => lead.contactDate && lead.status !== EXCLUDED_STATUS)
-      .map(({ groupId, groupTitle, contactDate }) => ({ groupId, groupTitle, contactDate }));
+      .map(({ groupId, groupTitle, name, contactDate }) => ({ groupId, groupTitle, name, contactDate }));
 
     return NextResponse.json({ leads });
   } catch (err) {

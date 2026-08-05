@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 interface Lead {
   groupId: string;
   groupTitle: string;
+  name: string;
   contactDate: string;
 }
 
@@ -206,6 +207,25 @@ export default function DashboardPage() {
     });
   }, [leads, from, to]);
 
+  // Same filter and pipeline ordering as `grouped`, but per-lead rather
+  // than aggregated - the detail table beneath the chart.
+  const leadDetails = useMemo(() => {
+    if (!leads) return [];
+    return leads
+      .filter((lead) => lead.contactDate >= from && lead.contactDate <= to)
+      .slice()
+      .sort((a, b) => {
+        const ai = PIPELINE_ORDER.indexOf(a.groupTitle);
+        const bi = PIPELINE_ORDER.indexOf(b.groupTitle);
+        if (ai !== bi) {
+          if (ai === -1) return 1;
+          if (bi === -1) return -1;
+          return ai - bi;
+        }
+        return a.name.localeCompare(b.name);
+      });
+  }, [leads, from, to]);
+
   const total = grouped.reduce((sum, g) => sum + g.count, 0);
   const maxCount = Math.max(1, ...grouped.map((g) => g.count));
 
@@ -326,6 +346,13 @@ export default function DashboardPage() {
         td:last-child, th:last-child { text-align: end; font-variant-numeric: tabular-nums; }
         .status-line { color: var(--text-muted); font-size: 13px; padding: 24px 0; text-align: center; }
         .error { color: #e66767; font-size: 13px; }
+        .count-pill {
+          font-size: 12px; font-weight: 600; color: var(--text-secondary);
+          background: var(--surface-1); border: 1px solid var(--border);
+          border-radius: 999px; padding: 3px 10px; font-variant-numeric: tabular-nums;
+        }
+        .scroll-table { max-height: 420px; overflow-y: auto; }
+        .group-tag { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-inline-end: 8px; }
       `}</style>
 
       <div className="wrap">
@@ -432,6 +459,36 @@ export default function DashboardPage() {
             )}
 
             {grouped.length > 0 && chartType === "pie" && <PieChart data={grouped} total={total} hovered={hovered} setHovered={setHovered} />}
+          </div>
+        )}
+
+        {leadDetails.length > 0 && (
+          <div className="card">
+            <div className="card-head">
+              <h2>Leads</h2>
+              <span className="count-pill">{leadDetails.length.toLocaleString()}</span>
+            </div>
+            <div className="scroll-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: "left" }}>Group</th>
+                    <th style={{ textAlign: "left" }}>Client name</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {leadDetails.map((lead, i) => (
+                    <tr key={`${lead.groupId}-${lead.name}-${i}`}>
+                      <td style={{ textAlign: "left" }}>
+                        <span className="group-tag" style={{ background: colorForGroup(lead.groupTitle) }} />
+                        {lead.groupTitle}
+                      </td>
+                      <td style={{ textAlign: "left" }}>{lead.name}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
