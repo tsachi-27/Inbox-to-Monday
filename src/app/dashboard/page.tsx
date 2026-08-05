@@ -250,8 +250,9 @@ export default function DashboardPage() {
           min-height: 100vh;
           padding: 40px 24px 72px;
           box-sizing: border-box;
+          overflow-x: hidden;
         }
-        .dash * { box-sizing: border-box; }
+        .dash * { box-sizing: border-box; min-width: 0; }
         .wrap { max-width: 880px; margin: 0 auto; }
         .page-header {
           display: flex; align-items: flex-start; justify-content: space-between; gap: 24px;
@@ -352,8 +353,21 @@ export default function DashboardPage() {
           background: var(--surface-1); border: 1px solid var(--border);
           border-radius: 999px; padding: 3px 10px; font-variant-numeric: tabular-nums;
         }
-        .scroll-table { max-height: 420px; overflow-y: auto; }
+        .scroll-table { max-height: 420px; overflow-y: auto; overflow-x: auto; }
         .group-tag { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-inline-end: 8px; }
+        @media (max-width: 640px) {
+          .dash { padding: 24px 14px 48px; }
+          h1 { font-size: 22px; }
+          .logo { height: 34px; }
+          .card { padding: 16px 16px; }
+          .hero { font-size: 40px; }
+          .bar-label { width: 100px; font-size: 12px; }
+          .preset-btn { font-size: 12px; padding: 6px 10px; }
+          table { font-size: 12px; }
+          .card-head { flex-wrap: wrap; gap: 10px; }
+          .card-head h2 { font-size: 14px; }
+          .chart-toggle button { font-size: 12px; padding: 5px 9px; }
+        }
       `}</style>
 
       <div className="wrap">

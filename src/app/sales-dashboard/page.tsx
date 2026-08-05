@@ -187,8 +187,9 @@ export default function SalesDashboardPage() {
           min-height: 100vh;
           padding: 40px 24px 72px;
           box-sizing: border-box;
+          overflow-x: hidden;
         }
-        .dash * { box-sizing: border-box; }
+        .dash * { box-sizing: border-box; min-width: 0; }
         .wrap { max-width: 960px; margin: 0 auto; }
         .page-header {
           display: flex; align-items: flex-start; justify-content: space-between; gap: 24px;
@@ -283,7 +284,7 @@ export default function SalesDashboardPage() {
         .legend-row { display: flex; align-items: center; gap: 8px; cursor: default; }
         .legend-title { color: var(--text-secondary); flex: 1; unicode-bidi: plaintext; }
         .legend-count { font-variant-numeric: tabular-nums; color: var(--text-primary); font-weight: 600; }
-        .scroll-table { max-height: 420px; overflow-y: auto; }
+        .scroll-table { max-height: 420px; overflow-y: auto; overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; font-size: 13px; }
         th { text-align: left; color: var(--text-muted); font-weight: 500; padding: 8px 10px; border-bottom: 1px solid var(--gridline); position: sticky; top: 0; background: var(--surface-1); }
         td { padding: 8px 10px; border-bottom: 1px solid var(--gridline); white-space: nowrap; unicode-bidi: plaintext; }
@@ -291,6 +292,21 @@ export default function SalesDashboardPage() {
         .status-line { color: var(--text-muted); font-size: 13px; padding: 24px 0; text-align: center; }
         .error { color: #e66767; font-size: 13px; }
         .empty { color: var(--text-muted); font-size: 14px; padding: 24px 0; text-align: center; }
+        @media (max-width: 640px) {
+          .dash { padding: 24px 14px 48px; }
+          .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 16px 12px; }
+          .kpi-value { font-size: 24px; }
+          h1 { font-size: 22px; }
+          .logo { height: 34px; }
+          .card { padding: 16px 16px; }
+          .bar-label { width: 100px; font-size: 12px; }
+          .bar-value { width: 70px; font-size: 11px; }
+          .year-btn { font-size: 14px; padding: 5px 12px; }
+          .preset-btn { font-size: 12px; padding: 6px 10px; }
+          .card-head { flex-wrap: wrap; gap: 10px; }
+          .card-head h2 { font-size: 14px; }
+          .chart-toggle button { font-size: 12px; padding: 5px 9px; }
+        }
       `}</style>
 
       <div className="wrap">
