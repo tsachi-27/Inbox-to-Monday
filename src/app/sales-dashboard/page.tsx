@@ -25,10 +25,32 @@ interface SalesRecord {
 const REVENUE_COLOR = "#3987e5"; // blue
 const PROFIT_COLOR = "#c98500"; // yellow/orange
 
+// Same validated categorical palette as the leads dashboard, assigned by
+// revenue rank (top customer gets slot 1, etc.) for the Funnel/Pie views,
+// where each customer needs its own distinct identity color.
+const CATEGORICAL = ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300", "#e66767"];
+const OTHER_COLOR = "#1a1a1a";
+const PIE_CAP = 6;
+
+const MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTH_FULL = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
 function monthLabel(month: string): string {
   const [y, m] = month.split("-");
-  const names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  return `${names[Number(m) - 1]} ${y}`;
+  return `${MONTH_ABBR[Number(m) - 1]} ${y}`;
 }
 
 function fmtMoney(n: number): string {
@@ -40,7 +62,9 @@ export default function SalesDashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [month, setMonth] = useState<string | null>(null);
+  const [year, setYear] = useState<number>(new Date().getFullYear());
   const [hovered, setHovered] = useState<string | null>(null);
+  const [custChartType, setCustChartType] = useState<"funnel" | "bar" | "pie">("bar");
 
   function loadData() {
     setLoading(true);
@@ -53,7 +77,10 @@ export default function SalesDashboardPage() {
         } else {
           setRecords(data.records);
           const months: string[] = Array.from(new Set<string>(data.records.map((r: SalesRecord) => r.sourceMonth))).sort();
-          if (months.length > 0) setMonth((m) => m ?? months[months.length - 1]);
+          if (months.length > 0) {
+            setMonth((m) => m ?? months[months.length - 1]);
+            setYear((y) => (records ? y : Number(months[months.length - 1].split("-")[0])));
+          }
         }
       })
       .catch((err) => setError(String(err)))
@@ -62,12 +89,23 @@ export default function SalesDashboardPage() {
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const months = useMemo(() => {
-    if (!records) return [];
-    return Array.from(new Set(records.map((r) => r.sourceMonth))).sort();
-  }, [records]);
+  // Years present in the data, plus the currently-selected year (so a year
+  // with no reports yet still shows up once picked) and the current
+  // calendar year (so there's always at least one year to look at).
+  const years = useMemo(() => {
+    const fromData = (records ?? []).map((r) => Number(r.sourceMonth.split("-")[0]));
+    return Array.from(new Set([...fromData, year, new Date().getFullYear()])).sort((a, b) => a - b);
+  }, [records, year]);
+
+  // All 12 months of the selected year, always shown - Tsachi can jump
+  // ahead to a month before that report's been imported yet, not just the
+  // ones that already have data.
+  const monthsInYear = useMemo(() => {
+    return MONTH_FULL.map((_, i) => `${year}-${String(i + 1).padStart(2, "0")}`);
+  }, [year]);
 
   const monthly = useMemo(() => {
     if (!records) return [];
@@ -91,9 +129,10 @@ export default function SalesDashboardPage() {
 
   const kpi = useMemo(() => {
     const revenue = selectedRecords.reduce((s, r) => s + r.totalPrice, 0);
+    const cost = selectedRecords.reduce((s, r) => s + r.cost, 0);
     const profit = selectedRecords.reduce((s, r) => s + r.profit, 0);
     const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
-    return { revenue, profit, margin, orders: selectedRecords.length };
+    return { revenue, cost, profit, margin, orders: selectedRecords.length };
   }, [selectedRecords]);
 
   const byCustomer = useMemo(() => {
@@ -108,6 +147,25 @@ export default function SalesDashboardPage() {
 
   const maxCustomerRevenue = Math.max(1, ...byCustomer.map((c) => c.revenue));
   const maxMonthly = Math.max(1, ...monthly.map((m) => Math.max(m.revenue, m.profit)));
+
+  const customerColor = useMemo(() => {
+    const map = new Map<string, string>();
+    byCustomer.forEach((c, i) => map.set(c.name, i < CATEGORICAL.length ? CATEGORICAL[i] : OTHER_COLOR));
+    return map;
+  }, [byCustomer]);
+
+  // Pie/funnel-with-identity-color cap at the categorical ceiling - past
+  // that the tail folds into "Other" rather than generating another hue.
+  const customerPieData = useMemo(() => {
+    const top = byCustomer.slice(0, PIE_CAP);
+    const rest = byCustomer.slice(PIE_CAP);
+    const otherRevenue = rest.reduce((s, c) => s + c.revenue, 0);
+    const slices = top.map((c) => ({ name: c.name, revenue: c.revenue, color: customerColor.get(c.name)! }));
+    if (otherRevenue > 0) slices.push({ name: "Other", revenue: otherRevenue, color: OTHER_COLOR });
+    return slices;
+  }, [byCustomer, customerColor]);
+
+  const totalCustomerRevenue = byCustomer.reduce((s, c) => s + c.revenue, 0);
 
   return (
     <main className="dash">
@@ -147,7 +205,16 @@ export default function SalesDashboardPage() {
           margin-bottom: 20px;
           box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 12px 32px -20px rgba(0,0,0,0.8);
         }
-        .filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+        .filters { display: flex; flex-direction: column; gap: 14px; }
+        .year-row { display: flex; align-items: center; gap: 8px; }
+        .year-btn {
+          font: inherit; font-size: 16px; font-weight: 650; padding: 6px 16px; border-radius: 8px;
+          border: 1px solid var(--border); background: transparent; color: var(--text-secondary);
+          cursor: pointer; transition: border-color 0.15s, color 0.15s;
+        }
+        .year-btn:hover { border-color: rgba(255,255,255,0.22); color: var(--text-primary); }
+        .year-btn[data-active="true"] { background: var(--text-primary); border-color: var(--text-primary); color: #000; }
+        .month-row { display: flex; flex-wrap: wrap; gap: 8px 10px; }
         .preset-btn {
           font: inherit; font-size: 13px; padding: 7px 14px; border-radius: 8px;
           border: 1px solid var(--border); background: transparent; color: var(--text-secondary);
@@ -161,7 +228,7 @@ export default function SalesDashboardPage() {
           margin-inline-start: auto;
         }
         .refresh-btn:hover { border-color: rgba(255,255,255,0.22); color: var(--text-primary); }
-        .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+        .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 20px; }
         .kpi-label { font-size: 13px; color: var(--text-secondary); margin: 0 0 6px; }
         .kpi-value {
           font-size: 30px; font-weight: 650; letter-spacing: -0.01em; line-height: 1;
@@ -188,6 +255,34 @@ export default function SalesDashboardPage() {
         .bar-track { flex: 1; height: 22px; }
         .bar-fill { height: 100%; border-radius: 4px; background: var(--accent); min-width: 2px; }
         .bar-value { width: 90px; flex-shrink: 0; font-size: 12px; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+        .chart-toggle { display: flex; gap: 6px; }
+        .chart-toggle button {
+          font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 8px;
+          border: 1px solid var(--border); background: transparent; color: var(--text-secondary); cursor: pointer;
+        }
+        .chart-toggle button:hover { border-color: rgba(255,255,255,0.22); color: var(--text-primary); }
+        .chart-toggle button[data-active="true"] { background: var(--text-primary); color: #000; font-weight: 600; border-color: var(--text-primary); }
+        .funnel-track { display: flex; width: 100%; height: 56px; border-radius: 8px; overflow: hidden; }
+        .funnel-seg {
+          height: 100%; display: flex; align-items: center; justify-content: center; position: relative;
+          transition: filter 0.1s; cursor: default; min-width: 2px;
+        }
+        .funnel-seg[data-hovered="true"] { filter: brightness(1.15); }
+        .funnel-seg-label {
+          font-size: 12px; font-weight: 700; color: #fff; text-align: center; padding: 0 6px;
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+          unicode-bidi: plaintext;
+        }
+        .funnel-axis { display: flex; width: 100%; margin-top: 8px; }
+        .funnel-axis-item {
+          font-size: 11px; color: var(--text-muted); text-align: center; padding: 0 2px;
+          overflow: hidden; text-overflow: ellipsis; white-space: nowrap; unicode-bidi: plaintext;
+        }
+        .pie-wrap { display: flex; align-items: center; gap: 32px; flex-wrap: wrap; }
+        .legend { display: flex; flex-direction: column; gap: 8px; font-size: 13px; flex: 1; min-width: 180px; }
+        .legend-row { display: flex; align-items: center; gap: 8px; cursor: default; }
+        .legend-title { color: var(--text-secondary); flex: 1; unicode-bidi: plaintext; }
+        .legend-count { font-variant-numeric: tabular-nums; color: var(--text-primary); font-weight: 600; }
         .scroll-table { max-height: 420px; overflow-y: auto; }
         table { width: 100%; border-collapse: collapse; font-size: 13px; }
         th { text-align: left; color: var(--text-muted); font-weight: 500; padding: 8px 10px; border-bottom: 1px solid var(--gridline); position: sticky; top: 0; background: var(--surface-1); }
@@ -209,14 +304,23 @@ export default function SalesDashboardPage() {
         </div>
 
         <div className="card filters">
-          {months.map((m) => (
-            <button key={m} className="preset-btn" data-active={month === m} onClick={() => setMonth(m)}>
-              {monthLabel(m)}
+          <div className="year-row">
+            {years.map((y) => (
+              <button key={y} className="year-btn" data-active={year === y} onClick={() => setYear(y)}>
+                {y}
+              </button>
+            ))}
+            <button className="refresh-btn" onClick={loadData} disabled={loading}>
+              {loading ? "Loading…" : "Refresh data"}
             </button>
-          ))}
-          <button className="refresh-btn" onClick={loadData} disabled={loading}>
-            {loading ? "Loading…" : "Refresh data"}
-          </button>
+          </div>
+          <div className="month-row">
+            {monthsInYear.map((m, i) => (
+              <button key={m} className="preset-btn" data-active={month === m} onClick={() => setMonth(m)}>
+                {MONTH_FULL[i]}
+              </button>
+            ))}
+          </div>
         </div>
 
         {error && (
@@ -227,7 +331,7 @@ export default function SalesDashboardPage() {
 
         {!error && loading && !records && <div className="card status-line">Loading sales data…</div>}
 
-        {!error && records && months.length === 0 && (
+        {!error && records && records.length === 0 && (
           <div className="card empty">No sales reports imported yet.</div>
         )}
 
@@ -238,6 +342,10 @@ export default function SalesDashboardPage() {
                 <div>
                   <p className="kpi-label">Revenue (excl. VAT)</p>
                   <div className="kpi-value">{fmtMoney(kpi.revenue)}</div>
+                </div>
+                <div>
+                  <p className="kpi-label">Cost</p>
+                  <div className="kpi-value">{fmtMoney(kpi.cost)}</div>
                 </div>
                 <div>
                   <p className="kpi-label">Profit</p>
@@ -297,23 +405,45 @@ export default function SalesDashboardPage() {
 
             <div className="card">
               <div className="card-head">
-                <h2>Revenue by customer — {monthLabel(month)}</h2>
+                <h2>Revenue by customer (VAT Excluded) — {monthLabel(month)}</h2>
+                <div className="chart-toggle">
+                  <button data-active={custChartType === "funnel"} onClick={() => setCustChartType("funnel")}>
+                    Funnel
+                  </button>
+                  <button data-active={custChartType === "bar"} onClick={() => setCustChartType("bar")}>
+                    Bar
+                  </button>
+                  <button data-active={custChartType === "pie"} onClick={() => setCustChartType("pie")}>
+                    Pie
+                  </button>
+                </div>
               </div>
+
               {byCustomer.length === 0 && <div className="empty">No orders this month.</div>}
-              {byCustomer.map((c) => {
-                const pct = (c.revenue / maxCustomerRevenue) * 100;
-                return (
-                  <div className="bar-row" key={c.name}>
-                    <div className="bar-label" title={c.name}>
-                      {c.name}
+
+              {byCustomer.length > 0 && custChartType === "funnel" && (
+                <CustomerFunnel data={byCustomer} total={totalCustomerRevenue} colorFor={(n) => customerColor.get(n) ?? OTHER_COLOR} hovered={hovered} setHovered={setHovered} />
+              )}
+
+              {byCustomer.length > 0 && custChartType === "bar" &&
+                byCustomer.map((c) => {
+                  const pct = (c.revenue / maxCustomerRevenue) * 100;
+                  return (
+                    <div className="bar-row" key={c.name}>
+                      <div className="bar-label" title={c.name}>
+                        {c.name}
+                      </div>
+                      <div className="bar-track">
+                        <div className="bar-fill" style={{ width: `${pct}%` }} />
+                      </div>
+                      <div className="bar-value">{fmtMoney(c.revenue)}</div>
                     </div>
-                    <div className="bar-track">
-                      <div className="bar-fill" style={{ width: `${pct}%` }} />
-                    </div>
-                    <div className="bar-value">{fmtMoney(c.revenue)}</div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+
+              {byCustomer.length > 0 && custChartType === "pie" && (
+                <CustomerPie data={customerPieData} total={totalCustomerRevenue} hovered={hovered} setHovered={setHovered} />
+              )}
             </div>
 
             <div className="card">
@@ -356,5 +486,124 @@ export default function SalesDashboardPage() {
         )}
       </div>
     </main>
+  );
+}
+
+// Single horizontal stacked bar, largest customer first - the Gantt-style
+// share-of-revenue view, matching the leads dashboard's funnel.
+function CustomerFunnel({
+  data,
+  total,
+  colorFor,
+  hovered,
+  setHovered,
+}: {
+  data: { name: string; revenue: number }[];
+  total: number;
+  colorFor: (name: string) => string;
+  hovered: string | null;
+  setHovered: (v: string | null) => void;
+}) {
+  return (
+    <div>
+      <div className="funnel-track">
+        {data.map((c) => {
+          const pct = total > 0 ? (c.revenue / total) * 100 : 0;
+          const showLabel = pct >= 9;
+          const showValueOnly = pct >= 4 && pct < 9;
+          return (
+            <div
+              key={c.name}
+              className="funnel-seg"
+              data-hovered={hovered === c.name}
+              style={{ width: `${pct}%`, background: colorFor(c.name) }}
+              onMouseEnter={() => setHovered(c.name)}
+              onMouseLeave={() => setHovered(null)}
+            >
+              <span className="funnel-seg-label">
+                {showLabel ? `${c.name} · ${fmtMoney(c.revenue)}` : showValueOnly ? fmtMoney(c.revenue) : ""}
+              </span>
+              <title>{`${c.name}: ${fmtMoney(c.revenue)} (${pct.toFixed(1)}%)`}</title>
+            </div>
+          );
+        })}
+      </div>
+      <div className="funnel-axis">
+        {data.map((c) => {
+          const pct = total > 0 ? (c.revenue / total) * 100 : 0;
+          return (
+            <div className="funnel-axis-item" key={c.name} style={{ width: `${pct}%` }}>
+              {c.name}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function CustomerPie({
+  data,
+  total,
+  hovered,
+  setHovered,
+}: {
+  data: { name: string; revenue: number; color: string }[];
+  total: number;
+  hovered: string | null;
+  setHovered: (v: string | null) => void;
+}) {
+  const size = 220;
+  const r = 90;
+  const cx = size / 2;
+  const cy = size / 2;
+  let angle = -90;
+
+  const slices = data.map((d) => {
+    const fraction = total > 0 ? d.revenue / total : 0;
+    const startAngle = angle;
+    const sweep = fraction * 360;
+    angle += sweep;
+    const endAngle = angle;
+    const large = sweep > 180 ? 1 : 0;
+    const toRad = (a: number) => (a * Math.PI) / 180;
+    const x1 = cx + r * Math.cos(toRad(startAngle));
+    const y1 = cy + r * Math.sin(toRad(startAngle));
+    const x2 = cx + r * Math.cos(toRad(endAngle));
+    const y2 = cy + r * Math.sin(toRad(endAngle));
+    const path = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`;
+    return { ...d, path, fraction };
+  });
+
+  return (
+    <div className="pie-wrap">
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label="Revenue by customer">
+        {slices.map((s) => (
+          <path
+            key={s.name}
+            d={s.path}
+            fill={s.color}
+            style={{ opacity: hovered && hovered !== s.name ? 0.55 : 1 }}
+            stroke="var(--surface-1)"
+            strokeWidth={2}
+            onMouseEnter={() => setHovered(s.name)}
+            onMouseLeave={() => setHovered(null)}
+          >
+            <title>{`${s.name}: ${fmtMoney(s.revenue)} (${(s.fraction * 100).toFixed(1)}%)`}</title>
+          </path>
+        ))}
+      </svg>
+      <div className="legend">
+        {slices.map((s) => (
+          <div className="legend-row" key={s.name} onMouseEnter={() => setHovered(s.name)} onMouseLeave={() => setHovered(null)}>
+            <span className="legend-swatch" style={{ background: s.color, opacity: hovered && hovered !== s.name ? 0.55 : 1 }} />
+            <span className="legend-title">{s.name}</span>
+            <span className="legend-count">
+              {fmtMoney(s.revenue)} · {(s.fraction * 100).toFixed(0)}%
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
