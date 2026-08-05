@@ -7,6 +7,7 @@ interface Lead {
   groupTitle: string;
   name: string;
   contactDate: string;
+  landingPage: string | null;
 }
 
 // The pipeline itself, left to right.
@@ -474,6 +475,7 @@ export default function DashboardPage() {
                   <tr>
                     <th style={{ textAlign: "left" }}>Group</th>
                     <th style={{ textAlign: "left" }}>Client name</th>
+                    <th style={{ textAlign: "left" }}>Landing page</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -484,6 +486,7 @@ export default function DashboardPage() {
                         {lead.groupTitle}
                       </td>
                       <td style={{ textAlign: "left" }}>{lead.name}</td>
+                      <td style={{ textAlign: "left" }}>{lead.landingPage || "—"}</td>
                     </tr>
                   ))}
                 </tbody>

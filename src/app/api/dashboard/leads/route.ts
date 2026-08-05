@@ -55,7 +55,7 @@ const EXCLUDED_STATUS = "PRE PRD";
 // change.
 export async function GET() {
   try {
-    const colIds = [boardConfig.columns.contactDate.id, boardConfig.columns.status.id];
+    const colIds = [boardConfig.columns.contactDate.id, boardConfig.columns.status.id, boardConfig.columns.landingPage.id];
 
     const firstPage = await mondayQuery<FirstPageResponse["data"]>(
       `query ($boardId: ID!, $colIds: [String!]) {
@@ -105,10 +105,11 @@ export async function GET() {
           name: item.name,
           contactDate: byId[boardConfig.columns.contactDate.id] || null,
           status: byId[boardConfig.columns.status.id] || null,
+          landingPage: byId[boardConfig.columns.landingPage.id] || null,
         };
       })
       .filter((lead) => lead.contactDate && lead.status !== EXCLUDED_STATUS)
-      .map(({ groupId, groupTitle, name, contactDate }) => ({ groupId, groupTitle, name, contactDate }));
+      .map(({ groupId, groupTitle, name, contactDate, landingPage }) => ({ groupId, groupTitle, name, contactDate, landingPage }));
 
     return NextResponse.json({ leads });
   } catch (err) {
