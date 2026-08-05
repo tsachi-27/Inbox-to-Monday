@@ -27,3 +27,27 @@ model ProcessedMessage {
   reason      String? // parse failure reason, when status is "needs_review"
   processedAt DateTime @default(now())
 }
+
+// One row per sales order line, imported from the monthly Priority ERP
+// export (an .xlsx dropped in a local folder, parsed by
+// scripts/import-sales-report.mts). Keyed by the Order # (Priority's own
+// SO number, e.g. "SO26000101") so re-importing the same month's file is
+// an upsert, not a duplicate insert.
+model SalesRecord {
+  orderNo       String   @id
+  customerNo    String
+  customerName  String
+  date          DateTime
+  orderBookRef  String?
+  quoteNo       String?
+  details       String?
+  totalPrice    Float // מחיר כולל - excl. VAT
+  vat           Float
+  totalWithVat  Float
+  currency      String
+  cost          Float
+  profit        Float
+  profitPercent Float
+  sourceMonth   String // "YYYY-MM", from the report filename
+  importedAt    DateTime @default(now())
+}
