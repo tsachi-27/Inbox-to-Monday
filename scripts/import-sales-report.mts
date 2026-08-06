@@ -8,15 +8,19 @@ import { PrismaClient } from "@prisma/client";
 // (one .xlsx per month, named "YYYY-MM.xlsx") and upserts every row into
 // SalesRecord, keyed by Order # so re-running on the same file is safe.
 //
-// Which columns get pulled is driven entirely by row 1 of the sheet -
-// wherever Tsachi writes "Include" above a column, that column is read (by
-// matching its row-2 Hebrew header against the map below), so re-running
-// this after he changes which columns are marked just picks up the change.
+// Two file shapes are supported, auto-detected per file:
+//  - Curated: row 1 has "Include" markers above the columns to keep, row 2
+//    has the Hebrew headers, data starts row 3 (how the first, hand-edited
+//    2026-07 report was built).
+//  - Raw: row 1 IS the Hebrew headers directly (the full, unedited Priority
+//    export - every field Priority has, ~100+ columns), data starts row 2.
+//    This is the format going forward. Either way, only the columns whose
+//    header matches HEADER_TO_FIELD are pulled - same 14 fields Tsachi
+//    confirmed on the curated file, regardless of column position, which
+//    shifts between the two shapes since the raw export has extra columns
+//    interspersed.
 const REPORTS_DIR = "C:\\Claud code\\Inbox to Monday\\Sales dashboard";
 const SHEET_NAME = "DataSheet";
-const HEADER_ROW = 2;
-const INCLUDE_ROW = 1;
-const FIRST_DATA_ROW = 3;
 
 const HEADER_TO_FIELD: Record<string, string> = {
   "מס. לקוח": "customerNo",
@@ -54,27 +58,46 @@ async function importFile(filePath: string) {
   const sheet = workbook.getWorksheet(SHEET_NAME);
   if (!sheet) throw new Error(`Sheet "${SHEET_NAME}" not found in ${filePath}`);
 
-  const fieldByColumn = new Map<number, string>();
-  const includeRow = sheet.getRow(INCLUDE_ROW);
-  const headerRow = sheet.getRow(HEADER_ROW);
-  includeRow.eachCell((cell, colNumber) => {
-    if (String(cell.value).trim() !== "Include") return;
-    const header = String(headerRow.getCell(colNumber).value ?? "").trim();
-    const field = HEADER_TO_FIELD[header];
-    if (!field) {
-      console.warn(`  skipping Include column with unrecognized header "${header}" (col ${colNumber})`);
-      return;
-    }
-    fieldByColumn.set(colNumber, field);
+  // Detect shape: curated files have the literal string "Include" somewhere
+  // in row 1; raw exports don't (row 1 is headers, not markers).
+  const row1 = sheet.getRow(1);
+  let isCurated = false;
+  row1.eachCell((cell) => {
+    if (String(cell.value).trim() === "Include") isCurated = true;
   });
 
-  console.log(`${path.basename(filePath)}: reading fields [${Array.from(fieldByColumn.values()).join(", ")}]`);
+  const headerRow = sheet.getRow(isCurated ? 2 : 1);
+  const firstDataRow = isCurated ? 3 : 2;
+
+  const fieldByColumn = new Map<number, string>();
+  if (isCurated) {
+    row1.eachCell((cell, colNumber) => {
+      if (String(cell.value).trim() !== "Include") return;
+      const header = String(headerRow.getCell(colNumber).value ?? "").trim();
+      const field = HEADER_TO_FIELD[header];
+      if (!field) {
+        console.warn(`  skipping Include column with unrecognized header "${header}" (col ${colNumber})`);
+        return;
+      }
+      fieldByColumn.set(colNumber, field);
+    });
+  } else {
+    headerRow.eachCell((cell, colNumber) => {
+      const header = String(cell.value ?? "").trim();
+      const field = HEADER_TO_FIELD[header];
+      if (field) fieldByColumn.set(colNumber, field);
+    });
+  }
+
+  console.log(
+    `${path.basename(filePath)}: ${isCurated ? "curated" : "raw"} format, reading fields [${Array.from(fieldByColumn.values()).join(", ")}]`
+  );
 
   let created = 0;
   let updated = 0;
   let skipped = 0;
 
-  for (let rowNumber = FIRST_DATA_ROW; rowNumber <= sheet.rowCount; rowNumber++) {
+  for (let rowNumber = firstDataRow; rowNumber <= sheet.rowCount; rowNumber++) {
     const row = sheet.getRow(rowNumber);
     const record: Record<string, unknown> = {};
     for (const [colNumber, field] of fieldByColumn) {
