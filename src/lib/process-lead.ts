@@ -3,7 +3,7 @@ import { parseLead } from "./parse-lead";
 import { parseContactForm } from "./parse-contact-form";
 import { parseFinalPrd } from "./parse-final-prd";
 import { buildColumnValues, mondayCreateItem, MondayApiError } from "./monday";
-import type { LeadSource } from "./board-config";
+import { boardConfig, type LeadSource } from "./board-config";
 
 export interface RawLead {
   source: LeadSource;
@@ -64,7 +64,7 @@ export async function processLead(lead: RawLead): Promise<ProcessResult> {
   const columnValues = buildColumnValues(parsed.fields, lead.source);
 
   try {
-    const itemId = await mondayCreateItem(parsed.fields.fullName, columnValues);
+    const itemId = await mondayCreateItem(parsed.fields.fullName, columnValues, boardConfig.sources[lead.source].groupId);
     await prisma.processedMessage.create({
       data: {
         messageId: lead.messageId,

@@ -15,6 +15,8 @@ interface SourceConfig {
   statusLabel?: string;
   subjectText?: string;
   fillSubjectFromMessage: boolean;
+  // Defaults to boardConfig.groupId ("New Leads") when unset.
+  groupId?: string;
 }
 
 export const boardConfig = {
@@ -49,6 +51,7 @@ export const boardConfig = {
       statusLabel: "PRE PRD",
       subjectText: "PRE PRD",
       fillSubjectFromMessage: false,
+      groupId: "group_mm6583mb", // dedicated "PRE PRD" group Tsachi created
     },
   } as Record<LeadSource, SourceConfig>,
 };

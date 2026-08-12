@@ -98,7 +98,7 @@ function sanitizeHeaderValue(value: string, envVarName: string): string {
   return cleaned.trim();
 }
 
-export async function mondayCreateItem(itemName: string, columnValues: Record<string, ColumnValue>): Promise<string> {
+export async function mondayCreateItem(itemName: string, columnValues: Record<string, ColumnValue>, groupId?: string): Promise<string> {
   const rawToken = process.env.MONDAY_API_TOKEN;
   if (!rawToken) {
     throw new MondayApiError("MONDAY_API_TOKEN is not set");
@@ -120,7 +120,7 @@ export async function mondayCreateItem(itemName: string, columnValues: Record<st
   `;
   const variables = {
     boardId: boardConfig.boardId,
-    groupId: boardConfig.groupId,
+    groupId: groupId ?? boardConfig.groupId,
     itemName,
     columnValues: JSON.stringify(columnValues),
   };
