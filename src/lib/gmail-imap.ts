@@ -11,6 +11,14 @@ const SOURCE_QUERIES: { source: RawLead["source"]; gmailraw: string }[] = [
     gmailraw: 'from:email@ati-propel.co.il subject:"ATI Lead" newer_than:3d in:inbox',
   },
   {
+    // A separate landing page (import-from-China consulting) from the same
+    // sender, with a Hebrew subject the "ATI Lead" query above doesn't
+    // match at all — discovered when a real submission from this page
+    // silently never reached Monday.
+    source: "ati-lead-import",
+    gmailraw: 'from:email@ati-propel.co.il subject:"ליד יבוא" newer_than:3d in:inbox',
+  },
+  {
     source: "ati-propel-contact",
     // "[PRE PRD] ... contact info ..." emails can loosely match "contact"
     // despite this exclusion — the startsWith check below is the real guard.

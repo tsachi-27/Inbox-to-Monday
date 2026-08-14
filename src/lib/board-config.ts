@@ -3,7 +3,7 @@
 // scripts/inspect-board.js against the real "Leads" board and are stable
 // (Monday column/group ids don't change once created).
 
-export type LeadSource = "ati-lead" | "ati-propel-contact" | "ati-final-prd";
+export type LeadSource = "ati-lead" | "ati-lead-import" | "ati-propel-contact" | "ati-final-prd";
 
 interface ColumnConfig {
   id: string;
@@ -39,6 +39,12 @@ export const boardConfig = {
   },
   sources: {
     "ati-lead": {
+      landingPageLabel: "Claude co.il",
+      fillSubjectFromMessage: false,
+    },
+    "ati-lead-import": {
+      // Same domain/brand as ati-lead - tagged the same way pending
+      // Tsachi telling us he wants this landing page distinguished.
       landingPageLabel: "Claude co.il",
       fillSubjectFromMessage: false,
     },

@@ -1,5 +1,6 @@
 import { prisma } from "./prisma";
 import { parseLead } from "./parse-lead";
+import { parseImportLead } from "./parse-import-lead";
 import { parseContactForm } from "./parse-contact-form";
 import { parseFinalPrd } from "./parse-final-prd";
 import { buildColumnValues, mondayCreateItem, MondayApiError } from "./monday";
@@ -20,6 +21,7 @@ export type ProcessResult =
 
 const PARSERS = {
   "ati-lead": parseLead,
+  "ati-lead-import": parseImportLead,
   "ati-propel-contact": parseContactForm,
   "ati-final-prd": parseFinalPrd,
 } as const;
