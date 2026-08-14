@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { prisma } from "./prisma";
 
 export class SendEmailError extends Error {
   constructor(message: string) {
@@ -58,5 +59,47 @@ export async function sendLeadEmail(opts: { to: string; subject: string; text: s
     });
   } catch (err) {
     throw new SendEmailError(err instanceof Error ? err.message : String(err));
+  }
+}
+
+// Wraps sendLeadEmail with a record in SentEmail (the /SentEmailsCC
+// monitoring page's data source), written for both success AND failure so
+// a failed send is visible there too, not silently lost. This is the
+// function every send should go through - sendLeadEmail alone skips
+// logging.
+export async function sendLeadEmailAndLog(opts: {
+  to: string;
+  subject: string;
+  text: string;
+  fromName: string;
+  leadName: string;
+  groupName: string;
+}): Promise<void> {
+  try {
+    await sendLeadEmail(opts);
+    await prisma.sentEmail.create({
+      data: {
+        leadName: opts.leadName,
+        groupName: opts.groupName,
+        toEmail: opts.to,
+        subject: opts.subject,
+        message: opts.text,
+        status: "sent",
+      },
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    await prisma.sentEmail.create({
+      data: {
+        leadName: opts.leadName,
+        groupName: opts.groupName,
+        toEmail: opts.to,
+        subject: opts.subject,
+        message: opts.text,
+        status: "failed",
+        error: message,
+      },
+    });
+    throw err;
   }
 }

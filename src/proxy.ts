@@ -26,5 +26,12 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard", "/api/dashboard/:path*", "/sales-dashboard", "/api/sales-dashboard/:path*"],
+  matcher: [
+    "/dashboard",
+    "/api/dashboard/:path*",
+    "/sales-dashboard",
+    "/api/sales-dashboard/:path*",
+    "/SentEmailsCC",
+    "/api/sent-emails-cc/:path*",
+  ],
 };

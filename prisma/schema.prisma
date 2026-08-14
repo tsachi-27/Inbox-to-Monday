@@ -51,3 +51,19 @@ model SalesRecord {
   sourceMonth   String // "YYYY-MM", from the report filename
   importedAt    DateTime @default(now())
 }
+
+// One row per email Claude Code sends on Tsachi's behalf to a specific
+// lead, for the /SentEmailsCC monitoring page. Written by
+// sendLeadEmailAndLog regardless of whether the send succeeded, so failures
+// are visible too, not just successes.
+model SentEmail {
+  id        String   @id @default(cuid())
+  sentAt    DateTime @default(now())
+  leadName  String
+  groupName String
+  toEmail   String
+  subject   String
+  message   String
+  status    String // "sent" | "failed"
+  error     String? // set when status is "failed"
+}
