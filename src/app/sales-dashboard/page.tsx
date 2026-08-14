@@ -316,7 +316,9 @@ export default function SalesDashboardPage() {
             <p className="subtitle">Monthly sales from Priority, by month and customer</p>
           </div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="logo" src="/ati-logo.png" alt="ATI - Advanced Thinking Ingenuity" />
+          <a href="/ATITools" aria-label="Back to ATI Tools">
+            <img className="logo" src="/ati-logo.png" alt="ATI - Advanced Thinking Ingenuity" />
+          </a>
         </div>
 
         <div className="card filters">

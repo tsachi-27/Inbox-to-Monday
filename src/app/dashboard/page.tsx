@@ -377,7 +377,9 @@ export default function DashboardPage() {
             <p className="subtitle">Lead volume by pipeline stage, filtered by Contact Date</p>
           </div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="logo" src="/ati-logo.png" alt="ATI - Advanced Thinking Ingenuity" />
+          <a href="/ATITools" aria-label="Back to ATI Tools">
+            <img className="logo" src="/ati-logo.png" alt="ATI - Advanced Thinking Ingenuity" />
+          </a>
         </div>
 
         <div className="card filters">

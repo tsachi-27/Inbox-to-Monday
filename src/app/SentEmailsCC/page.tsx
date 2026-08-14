@@ -126,7 +126,9 @@ export default function SentEmailsCCPage() {
             <p className="subtitle">Every email sent on Tsachi&apos;s behalf, most recent first</p>
           </div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="logo" src="/ati-logo.png" alt="ATI - Advanced Thinking Ingenuity" />
+          <a href="/ATITools" aria-label="Back to ATI Tools">
+            <img className="logo" src="/ati-logo.png" alt="ATI - Advanced Thinking Ingenuity" />
+          </a>
         </div>
 
         {error && (
