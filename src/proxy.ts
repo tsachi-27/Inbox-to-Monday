@@ -33,5 +33,6 @@ export const config = {
     "/api/sales-dashboard/:path*",
     "/SentEmailsCC",
     "/api/sent-emails-cc/:path*",
+    "/ATITools",
   ],
 };
