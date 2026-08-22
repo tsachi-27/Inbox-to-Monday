@@ -17,6 +17,12 @@ const TOOLS = [
     href: "/SentEmailsCC",
     color: "#199e70",
   },
+  {
+    name: "ATI PQ Generator",
+    description: "Customer price quote generator.",
+    href: "https://ati-pq.vercel.app/customers",
+    color: "#d55181",
+  },
 ];
 
 export default function ATIToolsPage() {
