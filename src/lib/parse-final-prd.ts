@@ -24,7 +24,9 @@ export function parseFinalPrd(subject: string, htmlBody: string): ParseResult<Fi
   const html = htmlBody || "";
   const fields: Record<string, string> = {};
 
-  const rowPattern = /<td[^>]*>(Name|Email|Phone|Company)<\/td>\s*<td[^>]*>([\s\S]*?)<\/td>/g;
+  // Label cell is sometimes plain text, sometimes wrapped in inline tags
+  // (e.g. <td ...><strong>Name</strong></td>) - the template varies.
+  const rowPattern = /<td[^>]*>(?:<[^>]+>)*(Name|Email|Phone|Company)(?:<[^>]+>)*<\/td>\s*<td[^>]*>([\s\S]*?)<\/td>/g;
   let m: RegExpExecArray | null;
   while ((m = rowPattern.exec(html))) {
     const label = m[1];
