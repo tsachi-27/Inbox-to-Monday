@@ -78,3 +78,60 @@ export async function findLeadsInGroup(groupName: string, leadName: string): Pro
       };
     });
 }
+
+// Finds an existing item anywhere on the board matching the given phone
+// and/or email (Monday's items_page_by_column_values is board-wide, not
+// scoped to a single group). Phone is checked first since it's the more
+// reliable identifier; falls back to email. Returns the first match, or
+// null if the lead genuinely isn't on the board yet.
+export async function findLeadByContact(phone?: string, email?: string): Promise<{ id: string; name: string } | null> {
+  const query = `
+    query ($boardId: ID!, $columnId: String!, $vals: [String]!) {
+      items_page_by_column_values (board_id: $boardId, columns: [{column_id: $columnId, column_values: $vals}]) {
+        items { id name }
+      }
+    }
+  `;
+
+  if (phone) {
+    const digits = phone.replace(/\D/g, "");
+    if (digits.length > 5) {
+      const data = await mondayQuery<{ items_page_by_column_values: { items: { id: string; name: string }[] } }>(query, {
+        boardId: boardConfig.boardId,
+        columnId: boardConfig.columns.mobile.id,
+        vals: [digits],
+      });
+      const match = data.items_page_by_column_values.items[0];
+      if (match) return match;
+    }
+  }
+
+  if (email) {
+    const data = await mondayQuery<{ items_page_by_column_values: { items: { id: string; name: string }[] } }>(query, {
+      boardId: boardConfig.boardId,
+      columnId: boardConfig.columns.email.id,
+      vals: [email],
+    });
+    const match = data.items_page_by_column_values.items[0];
+    if (match) return match;
+  }
+
+  return null;
+}
+
+// Sets a single column's value on an existing item without touching
+// anything else on it - used to flag columns.prePrd on a lead that
+// already exists rather than recreating them.
+export async function mondaySetTextColumn(itemId: string, columnId: string, value: string): Promise<void> {
+  const token = process.env.MONDAY_API_TOKEN;
+  if (!token) throw new MondayApiError("MONDAY_API_TOKEN is not set");
+
+  const query = `
+    mutation ($boardId: ID!, $itemId: ID!, $columnId: String!, $value: String!) {
+      change_simple_column_value (board_id: $boardId, item_id: $itemId, column_id: $columnId, value: $value) {
+        id
+      }
+    }
+  `;
+  await mondayQuery(query, { boardId: boardConfig.boardId, itemId, columnId, value });
+}

@@ -36,6 +36,11 @@ export const boardConfig = {
     mobile: { id: "mobile8", type: "phone" } satisfies ColumnConfig,
     email: { id: "email8", type: "text" } satisfies ColumnConfig,
     people: { id: "people7", type: "people" as const, userId: "7232428" },
+    // Marks "this lead filled out the PRE PRD questionnaire" independently
+    // of whatever group/status the lead is otherwise in - replaces the
+    // earlier dedicated-group approach, which was creating duplicate items
+    // for leads who already existed on the board under another source.
+    prePrd: { id: "text_mm7m1sym", type: "text" } satisfies ColumnConfig,
   },
   sources: {
     "ati-lead": {
@@ -53,11 +58,15 @@ export const boardConfig = {
       fillSubjectFromMessage: true,
     },
     "ati-final-prd": {
+      // No statusLabel/groupId: PRE PRD leads now land in the normal New
+      // Leads group like everything else - the dedicated group caused the
+      // same lead to appear twice when they'd already been contacted
+      // through another channel. process-lead.ts checks the whole board
+      // for an existing lead by phone/email before creating a new item;
+      // when one exists, it only sets columns.prePrd to "YES" on it.
       landingPageLabel: "Claude .com",
-      statusLabel: "PRE PRD",
       subjectText: "PRE PRD",
       fillSubjectFromMessage: false,
-      groupId: "group_mm6583mb", // dedicated "PRE PRD" group Tsachi created
     },
   } as Record<LeadSource, SourceConfig>,
 };
